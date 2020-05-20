@@ -28,19 +28,21 @@ import com.google.gson.Gson;
 @WebServlet("/User")
 public class Usercontroller extends HttpServlet {
 	private static final long serialVersionUID = 1L;
-       
-    /**
-     * @see HttpServlet#HttpServlet()
-     */
-    public Usercontroller() {
-        super();
-        // TODO Auto-generated constructor stub
-    }
 
 	/**
-	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
+	 * @see HttpServlet#HttpServlet()
 	 */
-	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException{
+	public Usercontroller() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+
+	/**
+	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse
+	 *      response)
+	 */
+	protected void doGet(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
 		// TODO Auto-generated method stub
 		Connection con = null;
 		Statement statement = null;
@@ -48,29 +50,30 @@ public class Usercontroller extends HttpServlet {
 		try {
 			// find a question
 			Class.forName("com.mysql.jdbc.Driver").newInstance();
-			
-			con  = DriverManager.getConnection("jdbc:mysql://localhost:3306/sample?"+"user=root&password=Satyam@12345");
+
+			con = DriverManager
+					.getConnection("jdbc:mysql://localhost:3306/sample?" + "user=root&password=Satyam@12345");
 			statement = con.createStatement();
 			rs = statement.executeQuery("Select * from userlist;");
-		
+
 			Gson gson = new Gson();
 			List<User> list = new ArrayList<User>();
 			int i = 0;
-			while(rs.next()) {
+			while (rs.next()) {
 				User user = new User();
 				user.setEmail(rs.getString("email"));
 				user.setFname(rs.getString("fname"));
 				user.setLname(rs.getString("lname"));
 				list.add(user);
 			}
-			
-			String jsonto  = gson.toJson(list.toArray());
+
+			String jsonto = gson.toJson(list.toArray());
 			System.out.println(jsonto);
-			
+
 			response.setContentType("application/json");
 			PrintWriter out = response.getWriter();
 			out.print(jsonto);
-			
+
 		} catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -83,8 +86,8 @@ public class Usercontroller extends HttpServlet {
 		} catch (IllegalAccessException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}finally {
-			if(rs != null) {
+		} finally {
+			if (rs != null) {
 				try {
 					rs.close();
 				} catch (SQLException e) {
@@ -92,7 +95,7 @@ public class Usercontroller extends HttpServlet {
 					e.printStackTrace();
 				}
 			}
-			if(statement != null ) {
+			if (statement != null) {
 				try {
 					statement.close();
 				} catch (SQLException e) {
@@ -100,7 +103,7 @@ public class Usercontroller extends HttpServlet {
 					e.printStackTrace();
 				}
 			}
-			if(con != null) {
+			if (con != null) {
 				try {
 					con.close();
 				} catch (SQLException e) {
@@ -112,9 +115,11 @@ public class Usercontroller extends HttpServlet {
 	}
 
 	/**
-	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
+	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse
+	 *      response)
 	 */
-	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+	protected void doPost(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
 		// TODO Auto-generated method stub
 		// Add method
 		BufferedReader br = new BufferedReader(new InputStreamReader(request.getInputStream()));
@@ -124,39 +129,63 @@ public class Usercontroller extends HttpServlet {
 		User user = gson.fromJson(input, User.class);
 		Connection con = null;
 		PreparedStatement ps = null;
+		ResultSet rs = null;
 		response.setContentType("application/json");
 		PrintWriter out = response.getWriter();
-		ResponseMessage responsemsg ;
+		ResponseMessage responsemsg;
 		try {
 			Class.forName("com.mysql.jdbc.Driver").newInstance();
-			con  = DriverManager.getConnection("jdbc:mysql://localhost:3306/sample?"+"user=root&password=Satyam@12345");
-			ps = con.prepareStatement("insert into userlist(email , fname ,lname) values (?,?,?) ;");
+			con = DriverManager
+					.getConnection("jdbc:mysql://localhost:3306/sample?" + "user=root&password=Satyam@12345");
+			ps = con.prepareStatement("Select * from userlist where email = ?");
 			ps.setString(1, user.getEmail());
-			ps.setString(2, user.getFname());
-			ps.setString(3, user.getLname());
-			int i = ps.executeUpdate();
+			rs = ps.executeQuery();
 			
-			if( i == 1) {
-				responsemsg = new ResponseMessage(0, "success");
-			}else {
-				responsemsg = new ResponseMessage(1, "Something went Wrong");
+			
+			if (rs.next()) {
+				// user exists so update user
+				ps.close();
+				ps = con.prepareStatement("Update userlist set fname = ? , lname = ? where email = ?");
+				ps.setString(1, user.getFname());
+				ps.setString(2, user.getLname());
+				ps.setString(3, user.getEmail());
+				int i = ps.executeUpdate();
+				if (i == 1) {
+					responsemsg = new ResponseMessage(0, "success");
+				} else {
+					responsemsg = new ResponseMessage(1, "Something went Wrong");
+				}
+			} else {
+				// insert query
+				ps.close();
+				ps = con.prepareStatement("insert into userlist(email , fname ,lname) values (?,?,?) ;");
+				ps.setString(1, user.getEmail());
+				ps.setString(2, user.getFname());
+				ps.setString(3, user.getLname());
+				int i = ps.executeUpdate();
+
+				if (i == 1) {
+					responsemsg = new ResponseMessage(0, "success");
+				} else {
+					responsemsg = new ResponseMessage(1, "Something went Wrong");
+				}
 			}
-			String jsonto  = gson.toJson(responsemsg);
+			String jsonto = gson.toJson(responsemsg);
 			System.out.println(jsonto);
-			
+
 			out.print(jsonto);
 			out.flush();
-		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException  e) {
+		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
 			// TODO Auto-generated catch block
 			responsemsg = new ResponseMessage(1, "Something went Wrong");
-			String jsonto  = gson.toJson(responsemsg);
+			String jsonto = gson.toJson(responsemsg);
 			System.out.println(jsonto);
 			out.print(jsonto);
 			out.flush();
 			e.printStackTrace();
-			
-		}finally {
-			if(ps != null) {
+
+		} finally {
+			if (ps != null) {
 				try {
 					ps.close();
 				} catch (SQLException e) {
@@ -164,7 +193,7 @@ public class Usercontroller extends HttpServlet {
 					e.printStackTrace();
 				}
 			}
-			if(con != null) {
+			if (con != null) {
 				try {
 					con.close();
 				} catch (SQLException e) {
@@ -172,13 +201,11 @@ public class Usercontroller extends HttpServlet {
 					e.printStackTrace();
 				}
 			}
-			if(out != null) {
+			if (out != null) {
 				out.close();
 			}
-		} 
-		
-		
-		
+		}
+
 	}
 
 }
